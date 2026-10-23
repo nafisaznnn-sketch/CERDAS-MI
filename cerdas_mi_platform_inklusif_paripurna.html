@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CERDAS MI - Platform Belajar Adaptif & AI Tutor Inklusif</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Poppins:wght@500;700;900&family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --font-main: 'Nunito', sans-serif;
+            --font-heading: 'Poppins', sans-serif;
+            --bg-color: #F0F7FF;
+            --text-main: #334155;
+            --primary: #3B82F6;
+        }
+        body.high-contrast {
+            --bg-color: #121212;
+            --text-main: #FFFFFF;
+            --primary: #F59E0B;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+        body.high-contrast * { border-color: #F59E0B !important; }
+        body.dyslexia-font {
+            --font-main: 'Lexend', sans-serif;
+            --font-heading: 'Lexend', sans-serif;
+            letter-spacing: 0.05em;
+            word-spacing: 0.1em;
+        }
+        body.text-lg-mode { font-size: 115%; }
+        body.text-xl-mode { font-size: 130%; }
+
+        body { font-family: var(--font-main); background-color: var(--bg-color); color: var(--text-main); transition: all 0.3s ease; }
+        h1, h2, h3, h4 { font-family: var(--font-heading); }
+        
+        .view-section { display: none; opacity: 0; transition: opacity 0.4s ease; }
+        .view-section.active { display: block; opacity: 1; animation: slideUp 0.5s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        @keyframes pulse-mic { 
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 
+            70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } 
+        }
+        .mic-active-pulse { animation: pulse-mic 1.5s infinite; background-color: #EF4444 !important; color: white !important; }
+        
+        button:focus, input:focus, select:focus, .focus-ring { outline: 4px solid #F59E0B; outline-offset: 2px; }
+        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        
+        @media print {
+            body * { visibility: hidden; }
+            #view-result, #view-result *, #view-dashboard, #view-dashboard * { visibility: visible; }
+            #view-result, #view-dashboard { position: absolute; left: 0; top: 0; width: 100%; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <div class="bg-slate-800 text-white text-xs md:text-sm py-2 px-4 flex flex-wrap justify-between items-center gap-2 z-50 sticky top-0 no-print">
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-bold text-amber-400">♿ Inklusi:</span>
+            <button onclick="toggleAccessibility('dyslexia')" class="hover:text-amber-300 px-2 py-1 rounded focus:outline-none">A-a (Disleksia)</button>
+            <button onclick="toggleAccessibility('contrast')" class="hover:text-amber-300 px-2 py-1 rounded focus:outline-none">🌗 Kontras</button>
+            <button onclick="toggleAccessibility('textSize')" class="hover:text-amber-300 px-2 py-1 rounded focus:outline-none">T+ (Ukuran)</button>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="toggleBlindMode()" id="btn-blind-mode" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-3 py-1 rounded-full flex items-center gap-2 transition-all shadow">
+                🎙️ <span id="txt-blind-mode">Aktifkan Mode Suara Tunanetra</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Microphone & Voice Assistant Live Banner -->
+    <div id="mic-status-banner" class="hidden bg-blue-600 text-white px-4 py-2 text-center font-bold sticky top-[36px] z-40 shadow-md transition-colors duration-300">
+        <span id="mic-icon" class="inline-block mr-2 rounded-full px-2">🔊</span> <span id="mic-text">Asisten Suara Aktif. Ucapkan "Buka Kuis", "Buka Materi", "Game", atau "Tanya AI".</span>
+    </div>
+
+    <nav class="bg-white/90 backdrop-blur-md shadow-sm px-6 py-4 sticky top-[36px] z-30 no-print">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="text-2xl font-black text-blue-600 cursor-pointer flex items-center gap-2" onclick="navigateTo('view-home')">
+                🚀 CERDAS <span class="text-emerald-500">MI</span>
+            </div>
+            <div class="hidden md:flex gap-3 font-bold text-slate-600 items-center">
+                <button onclick="navigateTo('view-home')" class="hover:text-blue-600 px-3 py-2 rounded-lg transition-colors hover:bg-blue-50">Beranda</button>
+                <button onclick="navigateTo('view-materi')" class="hover:text-blue-600 px-3 py-2 rounded-lg transition-colors hover:bg-blue-50">Materi & Lab</button>
+                <button onclick="openIdentityModal()" class="hover:text-blue-600 px-3 py-2 rounded-lg transition-colors hover:bg-blue-50">Kuis</button>
+                <button onclick="navigateTo('view-ai')" class="text-emerald-600 hover:text-emerald-700 px-3 py-2 rounded-lg transition-colors hover:bg-emerald-50 flex items-center gap-1">🤖 AI Tutor</button>
+                <button onclick="navigateTo('view-minigame')" class="text-purple-600 hover:text-purple-700 px-3 py-2 rounded-lg transition-colors hover:bg-purple-50">Game</button>
+                <button onclick="navigateTo('view-leaderboard')" class="text-amber-600 hover:text-amber-700 px-3 py-2 rounded-lg transition-colors hover:bg-amber-50">Peringkat</button>
+                <button onclick="navigateTo('view-dashboard')" class="text-slate-600 hover:text-slate-800 px-3 py-2 rounded-lg transition-colors hover:bg-slate-100">Dasbor Guru</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Student Identity Modal for Quiz -->
+    <div id="identity-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full card-shadow relative">
+            <h2 class="text-2xl font-black text-slate-800 mb-6">Siapa namamu? 👋</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block font-bold text-slate-600 mb-2">Nama Panggilan</label>
+                    <input type="text" id="student-name" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500" placeholder="Contoh: Budi">
+                </div>
+                <div class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block font-bold text-slate-600 mb-2">No. Absen</label>
+                        <input type="number" id="student-absen" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500" placeholder="1-40">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block font-bold text-slate-600 mb-2">Kelas</label>
+                        <select id="student-class" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500">
+                            <option value="IV-A">IV-A</option><option value="IV-B">IV-B</option><option value="IV-C">IV-C</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-600 mb-2">Pilih Bab Kuis (10 Soal)</label>
+                    <select id="student-topic" class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500">
+                        <option value="all">Semua Bab (Campuran - 10 Soal)</option>
+                        <option value="bab1">Bab 1: Bilangan Cacah s.d 100.000 (10 Soal)</option>
+                        <option value="bab2">Bab 2: Perkalian & Porogapit (10 Soal)</option>
+                        <option value="bab3">Bab 3: Pecahan, Desimal & Persen (10 Soal)</option>
+                        <option value="bab4">Bab 4: Bangun Datar (10 Soal)</option>
+                        <option value="bab5">Bab 5: Sudut & Data (10 Soal)</option>
+                    </select>
+                </div>
+                <button onclick="startQuizSession()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-lg mt-4 transition-transform hover:scale-105 shadow-lg">
+                    🚀 Mulai Kuis!
+                </button>
+                <button onclick="closeIdentityModal()" class="w-full text-slate-500 font-bold py-2 mt-2 hover:text-slate-700">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-1 w-full max-w-6xl mx-auto p-4 md:p-8">
+        
+        <!-- Home Section -->
+        <section id="view-home" class="view-section active text-center py-12 md:py-24">
+            <h1 class="text-5xl md:text-7xl font-black text-slate-800 mb-6 tracking-tight">
+                Belajar Matematika <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500">Jadi Super Seru!</span>
+            </h1>
+            <p class="text-xl text-slate-600 mb-10 max-w-2xl mx-auto font-medium">
+                Platform adaptif inklusif Kelas 4 SD/MI. Dilengkapi 5 Bab Materi Lengkap, Lab Visual Interaktif, Gemini AI Tutor, Papan Peringkat, dan Mode Tunanetra Suara 2-Arah.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <button onclick="navigateTo('view-materi')" class="bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl transition hover:-translate-y-1">
+                    📖 Buka Materi & Lab
+                </button>
+                <button onclick="navigateTo('view-ai')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl transition hover:-translate-y-1">
+                    🤖 Tanya Bumi AI Tutor
+                </button>
+                <button onclick="openIdentityModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-black text-lg px-8 py-4 rounded-2xl shadow-xl transition hover:-translate-y-1">
+                    🎯 Mulai Kuis
+                </button>
+            </div>
+        </section>
+
+        <!-- Materi & Lab Section -->
+        <section id="view-materi" class="view-section py-8">
+            <h2 class="text-4xl font-black text-center text-slate-800 mb-8">📚 Buku Materi & Laboratorium Visual</h2>
+            
+            <div class="flex flex-wrap gap-2 mb-8 justify-center">
+                <button onclick="switchLab('lab-bab1')" class="lab-tab-btn px-4 py-2 rounded-full font-bold bg-blue-600 text-white shadow">Bab 1: Bilangan</button>
+                <button onclick="switchLab('lab-bab2')" class="lab-tab-btn px-4 py-2 rounded-full font-bold bg-slate-200 text-slate-700 hover:bg-blue-100">Bab 2: Porogapit</button>
+                <button onclick="switchLab('lab-bab3')" class="lab-tab-btn px-4 py-2 rounded-full font-bold bg-slate-200 text-slate-700 hover:bg-blue-100">Bab 3: Pecahan</button>
+                <button onclick="switchLab('lab-bab4')" class="lab-tab-btn px-4 py-2 rounded-full font-bold bg-slate-200 text-slate-700 hover:bg-blue-100">Bab 4: Bangun Datar</button>
+                <button onclick="switchLab('lab-bab5')" class="lab-tab-btn px-4 py-2 rounded-full font-bold bg-slate-200 text-slate-700 hover:bg-blue-100">Bab 5: Sudut & Data</button>
+            </div>
+
+            <!-- Bab 1 -->
+            <div id="lab-bab1" class="lab-content block bg-white p-6 md:p-10 rounded-3xl card-shadow">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h3 class="text-2xl font-black text-blue-800">📖 Materi: Bilangan Cacah s.d 100.000</h3>
+                    <button onclick="speakMaterial('bab1')" class="bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold px-4 py-2 rounded-xl flex items-center gap-2">🔊 Bacakan Materi</button>
+                </div>
+                <div class="mb-8 p-6 bg-blue-50 rounded-2xl border-l-8 border-blue-500">
+                    <p class="text-slate-700 mb-4">Bilangan cacah adalah bilangan bulat yang dimulai dari nol (0, 1, 2, 3, dst). Di kelas 4, kita belajar membaca dan menulis bilangan sampai puluhan ribu!</p>
+                </div>
+                <div class="text-center">
+                    <h4 class="text-xl font-bold mb-4">🔬 Lab Nilai Tempat & Ejaan Otomatis</h4>
+                    <div class="flex flex-wrap justify-center gap-4 mb-6">
+                        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-100">
+                            <p class="font-bold text-slate-500 mb-2">Puluh Ribuan</p>
+                            <div class="flex items-center justify-center gap-3">
+                                <button onclick="updateAbacus('pr', -1)" class="w-10 h-10 bg-red-100 hover:bg-red-500 text-red-600 hover:text-white rounded-full font-black text-xl transition">-</button>
+                                <span id="val-pr" class="text-3xl font-black w-8">4</span>
+                                <button onclick="updateAbacus('pr', 1)" class="w-10 h-10 bg-emerald-100 hover:bg-emerald-500 text-emerald-600 hover:text-white rounded-full font-black text-xl transition">+</button>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-100">
+                            <p class="font-bold text-slate-500 mb-2">Ribuan</p>
+                            <div class="flex items-center justify-center gap-3">
+                                <button onclick="updateAbacus('rb', -1)" class="w-10 h-10 bg-red-100 hover:bg-red-500 text-red-600 hover:text-white rounded-full font-black text-xl transition">-</button>
+                                <span id="val-rb" class="text-3xl font-black w-8">5</span>
+                                <button onclick="updateAbacus('rb', 1)" class="w-10 h-10 bg-emerald-100 hover:bg-emerald-500 text-emerald-600 hover:text-white rounded-full font-black text-xl transition">+</button>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border-2 border-slate-100">
+                            <p class="font-bold text-slate-500 mb-2">Ratusan</p>
+                            <div class="flex items-center justify-center gap-3">
+                                <button onclick="updateAbacus('rt', -1)" class="w-10 h-10 bg-red-100 hover:bg-red-500 text-red-600 hover:text-white rounded-full font-black text-xl transition">-</button>
+                                <span id="val-rt" class="text-3xl font-black w-8">2</span>
+                                <button onclick="updateAbacus('rt', 1)" class="w-10 h-10 bg-emerald-100 hover:bg-emerald-500 text-emerald-600 hover:text-white rounded-full font-black text-xl transition">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p id="abacus-number" class="text-5xl font-black text-blue-700 mb-3">45.200</p>
+                    <p id="abacus-text" class="text-lg font-bold text-amber-700 italic bg-amber-50 inline-block px-6 py-2 rounded-full border border-amber-200">"Empat puluh lima ribu dua ratus"</p>
+                </div>
+            </div>
+
+            <!-- Bab 2 -->
+            <div id="lab-bab2" class="lab-content hidden bg-white p-6 md:p-10 rounded-3xl card-shadow">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h3 class="text-2xl font-black text-blue-800">📖 Materi: Perkalian & Pembagian Porogapit</h3>
+                    <button onclick="speakMaterial('bab2')" class="bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold px-4 py-2 rounded-xl flex items-center gap-2">🔊 Bacakan Materi</button>
+                </div>
+                <div class="mb-8 p-6 bg-blue-50 rounded-2xl border-l-8 border-blue-500">
+                    <p class="text-slate-700">Porogapit adalah metode pembagian bersusun dengan singkatan <strong>B-K-K-T</strong> (Bagi, Kali, Kurang, Turunkan).</p>
+                </div>
+                <div class="text-center">
+                    <h4 class="text-xl font-bold mb-4">🔬 Lab Porogapit (52 ÷ 4)</h4>
+                    <div class="bg-slate-800 text-white p-8 rounded-2xl max-w-md mx-auto font-mono text-2xl leading-relaxed text-left shadow-xl border-4 border-slate-700">
+                        <span class="text-emerald-400">&nbsp;&nbsp;&nbsp;13 (Hasil)</span><br>
+                        &nbsp;-----<br>
+                        4| 52<br>
+                        &nbsp;&nbsp;<span class="text-red-400">4</span> &nbsp;&nbsp;<span class="text-xs text-slate-400">← (4 x 1)</span><br>
+                        &nbsp;&nbsp;-- -<br>
+                        &nbsp;&nbsp;1<span class="text-emerald-400">2</span> &nbsp;<span class="text-xs text-slate-400">← (Turunkan 2)</span><br>
+                        &nbsp;&nbsp;<span class="text-red-400">12</span> &nbsp;<span class="text-xs text-slate-400">← (4 x 3)</span><br>
+                        &nbsp;&nbsp;-- -<br>
+                        &nbsp;&nbsp;&nbsp;<span class="text-amber-400">0</span> &nbsp;&nbsp;<span class="text-xs text-slate-400">← (Sisa Sempurna)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bab 3 -->
+            <div id="lab-bab3" class="lab-content hidden bg-white p-6 md:p-10 rounded-3xl card-shadow">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h3 class="text-2xl font-black text-blue-800">📖 Materi: Pecahan, Desimal & Persen</h3>
+                    <button onclick="speakMaterial('bab3')" class="bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold px-4 py-2 rounded-xl flex items-center gap-2">🔊 Bacakan Materi</button>
+                </div>
+                <div class="mb-8 p-6 bg-blue-50 rounded-2xl border-l-8 border-blue-500">
+                    <p class="text-slate-700">Pecahan menyatakan bagian dari keseluruhan. Atas = Pembilang, Bawah = Penyebut.</p>
+                </div>
+                <div class="text-center flex flex-col md:flex-row justify-center items-center gap-12">
+                    <div class="relative w-52 h-52 rounded-full border-8 border-amber-200 bg-amber-50 overflow-hidden shadow-inner" id="pizza-container"></div>
+                    <div class="w-full max-w-sm bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 text-left shadow-lg">
+                        <label class="font-bold text-slate-600 block mb-2">Pembilang: <span id="lbl-pbl" class="text-blue-600 text-xl font-black">1</span></label>
+                        <input type="range" id="slide-pbl" min="0" max="8" value="1" class="w-full accent-blue-600 mb-4" oninput="updatePizza()">
+                        
+                        <label class="font-bold text-slate-600 block mb-2">Penyebut: <span id="lbl-pyb" class="text-amber-600 text-xl font-black">4</span></label>
+                        <input type="range" id="slide-pyb" min="1" max="8" value="4" class="w-full accent-amber-500 mb-6" oninput="updatePizza()">
+                        
+                        <div class="pt-4 border-t-2 border-slate-200 flex justify-between items-end">
+                            <div class="text-center"><span class="text-xs font-bold text-slate-400">Pecahan</span><span class="text-2xl font-black text-blue-700 block" id="txt-pecahan">1/4</span></div>
+                            <div class="text-center"><span class="text-xs font-bold text-slate-400">Desimal</span><span class="text-xl font-black text-emerald-600 block" id="txt-desimal">0.25</span></div>
+                            <div class="text-center"><span class="text-xs font-bold text-slate-400">Persen</span><span class="text-xl font-black text-purple-600 block" id="txt-persen">25%</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bab 4 -->
+            <div id="lab-bab4" class="lab-content hidden bg-white p-6 md:p-10 rounded-3xl card-shadow">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h3 class="text-2xl font-black text-blue-800">📖 Materi: Bangun Datar (Luas & Keliling)</h3>
+                    <button onclick="speakMaterial('bab4')" class="bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold px-4 py-2 rounded-xl flex items-center gap-2">🔊 Bacakan Materi</button>
+                </div>
+                <div class="mb-8 p-6 bg-blue-50 rounded-2xl border-l-8 border-blue-500">
+                    <p class="text-slate-700">Mempelajari rumus Luas dan Keliling untuk Persegi Panjang, Persegi, dan Segitiga Siku-siku.</p>
+                </div>
+                <div class="text-center bg-slate-50 p-6 rounded-2xl border-2 border-slate-100">
+                    <div class="mb-6 flex justify-center items-center gap-4 flex-wrap">
+                        <label class="font-bold text-slate-600">Pilih Bangun:</label>
+                        <select id="shape-selector" onchange="updateShape()" class="px-4 py-2 rounded-xl border-2 border-blue-500 font-bold text-blue-700 bg-white">
+                            <option value="persegipanjang">Persegi Panjang</option>
+                            <option value="persegi">Persegi</option>
+                            <option value="segitiga">Segitiga Siku-Siku</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col md:flex-row justify-center items-center gap-12">
+                        <div class="w-64 h-64 flex items-center justify-center bg-white border-2 border-dashed border-slate-300 rounded-xl relative">
+                            <div class="bg-blue-400 flex items-center justify-center relative transition-all duration-300 shadow-md" id="shape-box" style="width: 200px; height: 100px;">
+                                <span class="absolute -bottom-8 font-bold text-blue-700 bg-white px-2 rounded text-sm" id="lbl-ukuran-p">p = <span id="val-p">4</span> cm</span>
+                                <span class="absolute -left-12 font-bold text-emerald-600 bg-white px-2 rounded transform -rotate-90 text-sm" id="lbl-ukuran-l">l = <span id="val-l">2</span> cm</span>
+                            </div>
+                        </div>
+                        <div class="w-full max-w-xs text-left space-y-4">
+                            <div>
+                                <label class="font-bold text-slate-600 block mb-1 text-sm" id="lbl-slider-p">Panjang / Alas (cm)</label>
+                                <input type="range" id="slide-p" min="2" max="8" value="4" class="w-full accent-blue-600" oninput="updateShape()">
+                            </div>
+                            <div id="wrap-slide-l">
+                                <label class="font-bold text-slate-600 block mb-1 text-sm" id="lbl-slider-l">Lebar / Tinggi (cm)</label>
+                                <input type="range" id="slide-l" min="2" max="8" value="2" class="w-full accent-emerald-500" oninput="updateShape()">
+                            </div>
+                            <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                                <p class="text-slate-600 text-sm">Luas: <span class="text-xl text-emerald-600 font-black ml-2" id="txt-luas">8</span> cm²</p>
+                                <p class="text-slate-600 text-sm">Keliling: <span class="text-xl text-amber-600 font-black ml-2" id="txt-keliling">12</span> cm</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bab 5 -->
+            <div id="lab-bab5" class="lab-content hidden bg-white p-6 md:p-10 rounded-3xl card-shadow">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h3 class="text-2xl font-black text-blue-800">📖 Materi: Sudut & Pengumpulan Data</h3>
+                    <button onclick="speakMaterial('bab5')" class="bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold px-4 py-2 rounded-xl flex items-center gap-2">🔊 Bacakan Materi</button>
+                </div>
+                <div class="mb-8 p-6 bg-blue-50 rounded-2xl border-l-8 border-blue-500">
+                    <p class="text-slate-700">Mempelajari jenis sudut (Lancip < 90°, Siku-siku 90°, Tumpul > 90°, Lurus 180°).</p>
+                </div>
+                <div class="text-center">
+                    <h4 class="text-xl font-bold mb-4">🔬 Lab Jam Pengukur Sudut</h4>
+                    <div class="max-w-md mx-auto bg-slate-50 p-6 rounded-2xl border-2 border-slate-100 text-center shadow-inner">
+                        <div class="w-44 h-22 border-t-4 border-l-4 border-r-4 border-slate-800 rounded-t-full mx-auto relative mb-6 bg-amber-50 shadow-md overflow-hidden" style="height: 110px;">
+                            <div class="absolute bottom-0 left-0 w-full h-1 bg-slate-800"></div>
+                            <div class="absolute bottom-0 left-1/2 w-3 h-3 bg-slate-800 rounded-full transform -translate-x-1/2 translate-y-1/2 z-10"></div>
+                            <div id="angle-line" class="absolute bottom-0 left-1/2 w-20 h-1 bg-red-500 origin-left transition-transform duration-300" style="transform: rotate(-45deg);"></div>
+                        </div>
+                        <input type="range" id="slide-sudut" min="0" max="180" value="45" class="w-full accent-blue-600" oninput="updateAngle()">
+                        <div class="mt-4 flex justify-between items-center px-2">
+                            <div class="text-left"><span class="text-xs font-bold text-slate-400">Ukuran</span><span class="text-2xl font-black text-blue-600 block" id="txt-derajat">45°</span></div>
+                            <div class="text-right"><span class="text-xs font-bold text-slate-400 block mb-1">Jenis</span><span class="px-3 py-1 bg-emerald-100 text-emerald-700 font-bold rounded-full text-sm" id="txt-jenis-sudut">Lancip</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-ai" class="view-section py-8 max-w-3xl mx-auto">
+            <div class="bg-white p-6 md:p-10 rounded-3xl card-shadow border-t-8 border-indigo-500">
+                <div class="flex items-center gap-3 mb-6 pb-4 border-b-2 border-slate-100">
+                    <span class="text-4xl">🤖</span>
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800">Bumi AI Tutor</h2>
+                        <p class="text-slate-500 text-sm">Teman belajar matematika yang ramah untuk anak SD/MI</p>
+                    </div>
+                </div>
+
+                <!-- Quick Prompt Chips -->
+                <div class="mb-6 flex flex-wrap gap-2">
+                    <button onclick="askAiQuick('Bagaimana cara menghitung luas persegi panjang dengan analogi benda sehari-hari?')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-2 rounded-xl border border-indigo-200 transition">💡 Rumus Luas Persegi Panjang</button>
+                    <button onclick="askAiQuick('Tolong buatkan contoh soal cerita pecahan matematika tentang martabak manis')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold px-3 py-2 rounded-xl border border-blue-200 transition">🍕 Soal Cerita Martabak Pecahan</button>
+                    <button onclick="askAiQuick('Bagaimana cara menjelaskan pembagian porogapit kepada anak kelas 4 SD secara mudah?')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs font-bold px-3 py-2 rounded-xl border border-amber-200 transition">➗ Tips Menguasai Porogapit</button>
+                </div>
+
+                <div id="ai-chat-box" class="bg-slate-50 h-80 rounded-2xl p-4 overflow-y-auto mb-4 border-2 border-slate-100 space-y-4">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black flex-shrink-0">AI</div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 max-w-md text-slate-700">
+                            Halo! Aku Bumi, teman belajarmu. Ada materi matematika yang bikin bingung? Tanya apa saja ya, nanti aku jelaskan dengan cerita seru!
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <input type="text" id="ai-user-input" class="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-500" placeholder="Tanya apa saja ke Bumi di sini..." onkeypress="if(event.key==='Enter') sendGeminiAiMessage()">
+                    <button onclick="sendGeminiAiMessage()" id="btn-send-ai" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-xl shadow transition">Kirim 🚀</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quiz Section -->
+        <section id="view-quiz" class="view-section py-8 max-w-3xl mx-auto">
+            <div class="bg-white p-6 md:p-10 rounded-3xl card-shadow relative border-t-8 border-blue-500">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-100 flex-wrap gap-2">
+                    <div>
+                        <span id="quiz-student-name" class="font-black text-lg text-slate-700">Siswa</span>
+                        <span id="quiz-topic-badge" class="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-bold">Bab</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="readCurrentQuizQuestion()" class="bg-amber-100 text-amber-800 hover:bg-amber-200 font-bold px-3 py-1 rounded-lg text-xs flex items-center gap-1">🔊 Baca Soal</button>
+                        <div class="bg-blue-100 text-blue-700 px-4 py-2 rounded-full font-black text-sm">
+                            Soal <span id="quiz-progress-text">1 / 10</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Voice / Mic Status in Quiz -->
+                <div class="mb-6 flex justify-center">
+                    <button onclick="startListeningManual()" id="btn-manual-mic" class="bg-red-100 hover:bg-red-500 text-red-600 hover:text-white font-bold py-3 px-6 rounded-full border-2 border-red-500 transition-colors shadow flex items-center gap-2">
+                        🎙️ <span id="mic-btn-label">Bicara Sekarang (Sebut A, B, C, D)</span>
+                    </button>
+                </div>
+
+                <div class="mb-8 text-center" id="question-area">
+                    <h2 id="question-text" class="text-2xl font-black text-slate-800 leading-snug mb-6">Memuat soal...</h2>
+                </div>
+
+                <div id="options-box" class="space-y-4 mb-8"></div>
+            </div>
+        </section>
+
+        <!-- Explanation Section -->
+        <section id="view-explanation" class="view-section py-8 max-w-3xl mx-auto">
+            <div class="bg-white p-8 rounded-3xl card-shadow text-center">
+                <div id="exp-icon" class="text-6xl mb-4">✅</div>
+                <h2 id="exp-title" class="text-3xl font-black text-slate-800 mb-2">Kerja Bagus!</h2>
+                <div class="bg-blue-50 p-6 rounded-2xl mb-8 border-2 border-blue-100 text-left">
+                    <p class="font-bold text-slate-500 mb-2">Pembahasan:</p>
+                    <p id="exp-detail" class="text-lg text-slate-700 font-medium leading-relaxed">...</p>
+                </div>
+                <button onclick="nextQuestion()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl text-xl hover:scale-105 transition-transform shadow">
+                    Lanjut ➡️
+                </button>
+            </div>
+        </section>
+
+        <!-- Result Section (Certificate & Rapor) -->
+        <section id="view-result" class="view-section py-8 max-w-3xl mx-auto">
+            <div class="bg-white p-10 rounded-3xl card-shadow text-center border-8 border-double border-amber-400 relative">
+                <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-1">Sertifikat Penghargaan Resmi</h2>
+                <h1 class="text-4xl font-black text-blue-700 mb-4">CERDAS MI</h1>
+                <p class="text-slate-600 mb-2">Diberikan dengan bangga kepada:</p>
+                <h3 id="res-name" class="text-4xl font-black text-slate-900 mb-1">Nama Siswa</h3>
+                <p class="text-slate-500 font-bold mb-6" id="res-class">Kelas IV</p>
+                
+                <div class="flex justify-center mb-6">
+                    <div class="w-32 h-32 rounded-full border-8 border-emerald-400 flex items-center justify-center bg-emerald-50 shadow-inner">
+                        <span id="res-score" class="text-5xl font-black text-emerald-600">100</span>
+                    </div>
+                </div>
+                
+                <div id="badges-container" class="flex justify-center gap-2 mb-8 flex-wrap"></div>
+                
+                <div class="flex justify-center gap-4 no-print">
+                    <button onclick="window.print()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-6 py-3 rounded-xl transition shadow">🖨️ Cetak Sertifikat</button>
+                    <button onclick="navigateTo('view-leaderboard')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition shadow">🏆 Lihat Peringkat</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Leaderboard Section -->
+        <section id="view-leaderboard" class="view-section py-8 max-w-3xl mx-auto">
+            <div class="bg-white p-6 md:p-10 rounded-3xl card-shadow">
+                <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-100">
+                    <h2 class="text-3xl font-black text-slate-800">🏆 Papan Peringkat Kelas</h2>
+                    <button onclick="navigateTo('view-home')" class="text-blue-600 font-bold text-sm">← Beranda</button>
+                </div>
+                <div id="leaderboard-list" class="space-y-3"></div>
+            </div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="view-dashboard" class="view-section py-8 max-w-5xl mx-auto">
+            <div class="bg-white p-6 rounded-3xl card-shadow no-print">
+                <div class="flex justify-between items-end mb-8 flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-800">📊 Dasbor Guru</h2>
+                        <p class="text-slate-500">Rekap Nilai Siswa Inklusif Kelas IV</p>
+                    </div>
+                    <button onclick="clearDashboard()" class="bg-red-100 text-red-600 px-4 py-2 rounded-lg font-bold">Reset Data</button>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 font-bold text-sm">
+                                <th class="py-3 px-4">Tgl / Jam</th>
+                                <th class="py-3 px-4">Nama Siswa</th>
+                                <th class="py-3 px-4">Kelas</th>
+                                <th class="py-3 px-4">Topik</th>
+                                <th class="py-3 px-4">Skor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-tbody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mini Game Section -->
+        <section id="view-minigame" class="view-section py-8 max-w-2xl mx-auto">
+            <div class="bg-slate-900 p-8 rounded-3xl card-shadow text-center text-white">
+                <h2 class="text-3xl font-black text-amber-400 mb-2">⚡ Kilat Berhitung!</h2>
+                <p class="text-slate-400 mb-8">Asah kecepatan perkalian dalam 30 detik!</p>
+                
+                <div id="game-setup">
+                    <button onclick="startMiniGame()" class="bg-emerald-500 text-white font-black text-2xl py-4 px-12 rounded-full hover:bg-emerald-600 shadow-lg transition">Mulai Game!</button>
+                </div>
+                <div id="game-play" class="hidden">
+                    <div class="flex justify-between mb-8">
+                        <div class="text-xl font-bold bg-slate-800 px-4 py-2 rounded-lg">Waktu: <span id="game-time" class="text-red-400">30</span>s</div>
+                        <div class="text-xl font-bold bg-slate-800 px-4 py-2 rounded-lg">Skor: <span id="game-score" class="text-amber-400">0</span></div>
+                    </div>
+                    <div class="text-6xl font-black mb-10 text-amber-300" id="game-question">5 x 4 = ?</div>
+                    <div class="grid grid-cols-2 gap-4" id="game-options"></div>
+                </div>
+                <div id="game-over" class="hidden mt-8">
+                    <h3 class="text-2xl text-red-400 mb-2">Waktu Habis! 🎉</h3>
+                    <p class="text-4xl font-black text-amber-400 mb-6">Skor Akhir: <span id="game-final-score">0</span></p>
+                    <button onclick="startMiniGame()" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow">Main Lagi</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const state = {
+            student: { name: "", absen: "", class: "", topic: "" },
+            quiz: { currentIndex: 0, score: 0, questions: [] },
+            voice: { active: false, synth: window.speechSynthesis, recognition: null, isListening: false, isSpeaking: false },
+            dashboard: JSON.parse(localStorage.getItem('cerdasmi_dash')) || [],
+            game: { score: 0, time: 30, timer: null, answer: 0 }
+        };
+
+        const dbQs = [
+            { c: "bab1", q: "Lambang bilangan Tiga belas ribu lima ratus adalah...", o: ["1.350", "13.050", "13.500", "13.005"], a: 2, e: "13.000 ditambah 500 menjadi 13.500." },
+            { c: "bab1", q: "Angka 4 pada bilangan 45.200 menempati nilai tempat...", o: ["Ratusan", "Ribuan", "Puluh Ribuan", "Puluhan"], a: 2, e: "Angka 4 berada di posisi kelima dari belakang, yaitu Puluh Ribuan." },
+            { c: "bab1", q: "Manakah tanda perbandingan yang benar untuk 25.400 titik-titik 25.040?", o: [">", "<", "=", "+"], a: 0, e: "Nilai ratusan 4 lebih besar dari 0, jadi 25.400 lebih besar." },
+            { c: "bab1", q: "Nilai angka 7 pada bilangan 72.000 adalah...", o: ["700", "7.000", "70.000", "7"], a: 2, e: "Angka 7 menempati tempat puluh ribuan, bernilai 70.000." },
+            { c: "bab1", q: "Selisih dari 50.000 dan 30.000 adalah...", o: ["10.000", "20.000", "30.000", "40.000"], a: 1, e: "50 ribu dikurangi 30 ribu sama dengan 20 ribu." },
+            { c: "bab1", q: "Jumlah dari 12.000 dan 8.000 adalah...", o: ["18.000", "19.000", "20.000", "21.000"], a: 2, e: "12 ribu ditambah 8 ribu sama dengan 20 ribu." },
+            { c: "bab1", q: "Bilangan setelah 99.999 adalah...", o: ["10.000", "100.000", "1.000.000", "99.000"], a: 1, e: "99.999 ditambah 1 menjadi Seratus Ribu (100.000)." },
+            { c: "bab1", q: "Angka ribuan pada bilangan 34.567 adalah...", o: ["3", "4", "5", "6"], a: 1, e: "Angka keempat dari belakang adalah ribuan, yaitu 4." },
+            { c: "bab1", q: "Bentuk panjang dari 15.020 adalah...", o: ["10rb+5rb+2rt", "10rb+5rb+20", "1rb+5rt+20", "15rb+2"], a: 1, e: "10.000 ditambah 5.000 ditambah 20." },
+            { c: "bab1", q: "Setengah dari 40.000 adalah...", o: ["10.000", "20.000", "30.000", "40.000"], a: 1, e: "40.000 dibagi 2 sama dengan 20.000." },
+            
+            { c: "bab2", q: "Hasil dari 12 dikali 5 adalah...", o: ["50", "60", "70", "80"], a: 1, e: "(10 x 5) + (2 x 5) = 50 + 10 = 60." },
+            { c: "bab2", q: "Hasil dari 150 dibagi 3 adalah...", o: ["30", "40", "50", "60"], a: 2, e: "15 dibagi 3 adalah 5, ditambah nol menjadi 50." },
+            { c: "bab2", q: "Langkah pertama dalam metode porogapit adalah...", o: ["Kali", "Bagi", "Kurang", "Turunkan"], a: 1, e: "Singkatan porogapit adalah B-K-K-T, diawali dengan Bagi." },
+            { c: "bab2", q: "Hasil dari 25 dikali 4 adalah...", o: ["75", "100", "125", "150"], a: 1, e: "25 x 4 = 100." },
+            { c: "bab2", q: "Sisa pembagian dari 10 dibagi 3 adalah...", o: ["0", "1", "2", "3"], a: 1, e: "10 sama dengan (3 x 3) + 1. Sisanya adalah 1." },
+            { c: "bab2", q: "Hasil dari 1.200 dibagi 4 adalah...", o: ["30", "300", "3.000", "400"], a: 1, e: "12 dibagi 4 adalah 3, ditambah dua nol jadi 300." },
+            { c: "bab2", q: "Hasil dari 11 dikali 11 adalah...", o: ["111", "121", "131", "141"], a: 1, e: "11 x 11 = 121." },
+            { c: "bab2", q: "Jika 5 anak berbagi 25 permen secara merata, setiap anak mendapat...", o: ["4", "5", "6", "7"], a: 1, e: "25 dibagi 5 sama dengan 5." },
+            { c: "bab2", q: "Hasil dari 60 dikali 60 adalah...", o: ["360", "3.600", "120", "1.200"], a: 1, e: "6 x 6 = 36, ditambah dua nol menjadi 3.600." },
+            { c: "bab2", q: "Hasil dari 400 dibagi 8 adalah...", o: ["40", "50", "60", "80"], a: 1, e: "40 dibagi 8 adalah 5, ditambah nol menjadi 50." },
+
+            { c: "bab3", q: "Pecahan yang senilai dengan 1/2 adalah...", o: ["1/4", "2/4", "3/4", "2/3"], a: 1, e: "Pecahan 1/2 dikali 2 atas dan bawah menjadi 2/4." },
+            { c: "bab3", q: "Bentuk desimal dari pecahan 1/4 adalah...", o: ["0,2", "0,25", "0,4", "0,5"], a: 1, e: "1 dibagi 4 sama dengan 0,25." },
+            { c: "bab3", q: "Angka yang berada di bagian atas pada pecahan disebut...", o: ["Penyebut", "Pembilang", "Pembagi", "Pengali"], a: 1, e: "Bagian atas adalah Pembilang, bagian bawah adalah Penyebut." },
+            { c: "bab3", q: "Di antara pecahan berikut, manakah yang nilainya paling besar: 1/2, 1/3, atau 1/4?", o: ["1/2", "1/3", "1/4", "Sama besar"], a: 0, e: "Makin kecil penyebutnya, makin besar bagian kuenya." },
+            { c: "bab3", q: "Bentuk persen dari pecahan 1/2 adalah...", o: ["12%", "20%", "50%", "100%"], a: 2, e: "Setengah dari 100% adalah 50%." },
+            { c: "bab3", q: "Hasil dari 3/4 ditambah 1/4 adalah...", o: ["2/4", "3/8", "4/4 (satu utuh)", "4/8"], a: 2, e: "3 ditambah 1 sama dengan 4, jadi 4/4 atau 1 utuh." },
+            { c: "bab3", q: "Bentuk desimal dari 1/10 adalah...", o: ["0,01", "0,1", "1,0", "10,0"], a: 1, e: "1 dibagi 10 ditulis sebagai 0,1." },
+            { c: "bab3", q: "Pecahan 2/6 jika disederhanakan menjadi...", o: ["1/2", "1/3", "1/4", "2/3"], a: 1, e: "Atas dan bawah dibagi 2, menjadi 1/3." },
+            { c: "bab3", q: "Manakah pecahan yang senilai dengan 0,5?", o: ["1/2", "1/5", "5/100", "5/1"], a: 0, e: "0,5 sama dengan 5/10, disederhanakan menjadi 1/2." },
+            { c: "bab3", q: "Pecahan 3/5 dibaca...", o: ["Tiga dan lima", "Lima pertiga", "Tiga perlima", "Tiga kali lima"], a: 2, e: "Dibaca tiga perlima." },
+
+            { c: "bab4", q: "Rumus untuk mencari luas persegi panjang adalah...", o: ["panjang ditambah lebar", "dua kali (panjang ditambah lebar)", "panjang dikali lebar", "sisi dikali sisi"], a: 2, e: "Luas persegi panjang adalah panjang dikali lebar." },
+            { c: "bab4", q: "Keliling sebuah persegi yang panjang sisinya 5 cm adalah...", o: ["10 cm", "15 cm", "20 cm", "25 cm"], a: 2, e: "Keliling persegi adalah 4 dikali sisi (4 x 5 = 20 cm)." },
+            { c: "bab4", q: "Bangun datar yang memiliki 3 buah sisi dan 3 buah sudut adalah...", o: ["Persegi", "Segitiga", "Lingkaran", "Trapesium"], a: 1, e: "Segitiga selalu memiliki 3 sisi dan 3 sudut." },
+            { c: "bab4", q: "Luas persegi dengan sisi 6 cm adalah...", o: ["12 cm persegi", "24 cm persegi", "36 cm persegi", "48 cm persegi"], a: 2, e: "Luas persegi adalah sisi dikali sisi (6 x 6 = 36)." },
+            { c: "bab4", q: "Sebuah persegi panjang memiliki panjang 4 cm dan lebar 3 cm. Luasnya adalah...", o: ["7", "12", "14", "24"], a: 1, e: "4 dikali 3 sama dengan 12." },
+            { c: "bab4", q: "Keliling dari persegi panjang dengan panjang 4 cm dan lebar 3 cm adalah...", o: ["7", "12", "14", "24"], a: 2, e: "2 dikali (4 + 3) = 2 x 7 = 14." },
+            { c: "bab4", q: "Berapa jumlah sisi pada sebuah bangun persegi?", o: ["2", "3", "4", "5"], a: 2, e: "Persegi memiliki 4 sisi yang sama panjang." },
+            { c: "bab4", q: "Bangun datar manakah yang tidak memiliki sudut sama sekali?", o: ["Lingkaran", "Segitiga", "Persegi", "Layang-layang"], a: 0, e: "Lingkaran berbentuk lengkung mulus tanpa sudut." },
+            { c: "bab4", q: "Jika keliling sebuah persegi adalah 40 cm, berapa panjang sisinya?", o: ["5 cm", "10 cm", "20 cm", "40 cm"], a: 1, e: "40 dibagi 4 sama dengan 10 cm." },
+            { c: "bab4", q: "Luas bangun persegi panjang dengan panjang 10 cm dan lebar 5 cm adalah...", o: ["15", "30", "50", "100"], a: 2, e: "10 dikali 5 sama dengan 50." },
+
+            { c: "bab5", q: "Sudut yang besarnya tepat 90 derajat disebut sudut...", o: ["Lancip", "Tumpul", "Lurus", "Siku-siku"], a: 3, e: "Sudut yang tegak lurus pas 90 derajat adalah siku-siku." },
+            { c: "bab5", q: "Sudut yang besarnya kurang dari 90 derajat disebut sudut...", o: ["Lancip", "Tumpul", "Lurus", "Siku-siku"], a: 0, e: "Sudut yang lancip besarnya kurang dari 90 derajat." },
+            { c: "bab5", q: "Alat yang digunakan untuk mengukur besar sudut adalah...", o: ["Penggaris biasa", "Jangka", "Busur derajat", "Termometer"], a: 2, e: "Busur derajat digunakan untuk mengukur sudut." },
+            { c: "bab5", q: "Pada jam dinding, pukul 03.00 jarumnya membentuk sudut...", o: ["Lancip", "Siku-siku", "Tumpul", "Lurus"], a: 1, e: "Pukul 03.00 membentuk sudut siku-siku 90 derajat." },
+            { c: "bab5", q: "Sudut yang besarnya 120 derajat termasuk jenis sudut...", o: ["Lancip", "Siku-siku", "Tumpul", "Lurus"], a: 2, e: "Antara 90 dan 180 derajat disebut sudut tumpul." },
+            { c: "bab5", q: "Pukul 06.00 pada jarum jam membentuk sudut...", o: ["Lancip", "Siku-siku", "Tumpul", "Lurus"], a: 3, e: "Garis lurus mendatar besarnya 180 derajat." },
+            { c: "bab5", q: "Sudut 45 derajat termasuk ke dalam jenis sudut...", o: ["Lancip", "Siku-siku", "Tumpul", "Lurus"], a: 0, e: "Karena kurang dari 90 derajat, disebut sudut lancip." },
+            { c: "bab5", q: "Berapa jumlah total sudut dalam sebuah segitiga?", o: ["90 derajat", "180 derajat", "270 derajat", "360 derajat"], a: 1, e: "Total ketiga sudut dalam segitiga selalu 180 derajat." },
+            { c: "bab5", q: "Berapa jumlah total derajat dalam satu lingkaran penuh?", o: ["90 derajat", "180 derajat", "270 derajat", "360 derajat"], a: 3, e: "Satu putaran penuh lingkaran adalah 360 derajat." },
+            { c: "bab5", q: "Pukul 01.00 pada jam dinding membentuk sudut...", o: ["Lancip", "Siku-siku", "Tumpul", "Lurus"], a: 0, e: "Jarum jam 1 membentuk sudut yang kecil, yaitu sudut lancip." }
+        ];
+
+        function navigateTo(id) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            stopVoice();
+            if(state.game.timer) clearInterval(state.game.timer);
+            if(id === 'view-dashboard') renderDashboard();
+            if(id === 'view-leaderboard') renderLeaderboard();
+        }
+
+        function openIdentityModal() { document.getElementById('identity-modal').classList.remove('hidden'); }
+        function closeIdentityModal() { document.getElementById('identity-modal').classList.add('hidden'); }
+        
+        function switchLab(id) {
+            document.querySelectorAll('.lab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function toggleAccessibility(type) {
+            const b = document.body;
+            if (type === 'contrast') b.classList.toggle('high-contrast');
+            if (type === 'dyslexia') b.classList.toggle('dyslexia-font');
+            if (type === 'textSize') {
+                if (b.classList.contains('text-lg-mode')) { b.classList.remove('text-lg-mode'); b.classList.add('text-xl-mode'); } 
+                else if (b.classList.contains('text-xl-mode')) b.classList.remove('text-xl-mode'); 
+                else b.classList.add('text-lg-mode');
+            }
+        }
+
+        function playSfx(type) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator(); const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                if (type === 'correct') {
+                    osc.type = "sine"; osc.frequency.setValueAtTime(600, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.5, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                    osc.start(); osc.stop(ctx.currentTime + 0.5);
+                } else if (type === 'wrong') {
+                    osc.type = "sawtooth"; osc.frequency.setValueAtTime(300, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.2);
+                    gain.gain.setValueAtTime(0.5, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.start(); osc.stop(ctx.currentTime + 0.3);
+                } else {
+                    osc.type = "sine"; osc.frequency.setValueAtTime(880, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                    osc.start(); osc.stop(ctx.currentTime + 0.1);
+                }
+            } catch(e){}
+        }
+
+        // --- TTS & STT Voice Assistant Engine (Forced Indonesian ID) ---
+        function speakText(text, callback) {
+            if (!state.voice.synth) return;
+            state.voice.synth.cancel();
+            state.voice.isSpeaking = true;
+            
+            let u = new SpeechSynthesisUtterance(text);
+            u.lang = 'id-ID';
+            u.rate = 0.95;
+            
+            let voices = state.voice.synth.getVoices();
+            let idVoice = voices.find(v => v.lang === 'id-ID' || v.lang.toLowerCase().includes('id') || v.lang.toLowerCase().includes('indonesian'));
+            if (idVoice) u.voice = idVoice;
+
+            u.onstart = () => updateMicUI(false, "Membacakan...");
+            u.onend = () => {
+                state.voice.isSpeaking = false;
+                updateMicUI(true, "Mendengarkan instruksi/jawaban...");
+                if(state.voice.active) startListening();
+                if(callback) callback();
+            };
+            state.voice.synth.speak(u);
+        }
+
+        function speakMaterial(bab) {
+            let texts = {
+                bab1: "Materi Bab 1. Bilangan Cacah sampai 100.000. Bilangan cacah dimulai dari nol. Nilai tempat terdiri dari satuan, puluhan, ratusan, ribuan, dan puluh ribuan.",
+                bab2: "Materi Bab 2. Perkalian dan Pembagian Porogapit. Porogapit adalah metode pembagian bersusun dengan langkah Bagi, Kali, Kurang, dan Turunkan.",
+                bab3: "Materi Bab 3. Pecahan, Desimal dan Persen. Pecahan terdiri atas pembilang di atas dan penyebut di bawah.",
+                bab4: "Materi Bab 4. Bangun Datar. Mempelajari luas dan keliling persegi panjang, persegi, serta segitiga.",
+                bab5: "Materi Bab 5. Sudut dan Data. Sudut terdiri dari lancip, siku-siku, tumpul, dan lurus."
+            };
+            speakText(texts[bab] || "Materi pembelajaran CERDAS MI.", null);
+        }
+
+        function toggleBlindMode() {
+            state.voice.active = !state.voice.active;
+            const btnTxt = document.getElementById('txt-blind-mode');
+            const banner = document.getElementById('mic-status-banner');
+            
+            if (state.voice.active) {
+                btnTxt.textContent = "Matikan Suara";
+                banner.classList.remove('hidden');
+                
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if(SR) {
+                    state.voice.recognition = new SR();
+                    state.voice.recognition.lang = 'id-ID';
+                    state.voice.recognition.continuous = false;
+                    state.voice.recognition.interimResults = false;
+                    
+                    state.voice.recognition.onstart = () => { state.voice.isListening = true; };
+                    state.voice.recognition.onresult = (e) => {
+                        let text = e.results[0][0].transcript.toLowerCase().trim();
+                        updateMicUI(false, `Terdengar: "${text}"`);
+                        processGlobalVoiceCommand(text);
+                    };
+                    state.voice.recognition.onerror = () => {};
+                    state.voice.recognition.onend = () => {
+                        state.voice.isListening = false;
+                        if (state.voice.active && !state.voice.isSpeaking) {
+                            setTimeout(startListening, 800);
+                        }
+                    };
+                } else {
+                    alert("Browser tidak support SpeechRecognition.");
+                    state.voice.active = false; return;
+                }
+                speakText("Mode suara Tunanetra aktif. Ucapkan buka kuis, buka materi, game, atau tanya a i.", startListening);
+            } else {
+                btnTxt.textContent = "Aktifkan Mode Suara Tunanetra";
+                banner.classList.add('hidden');
+                stopVoice();
+            }
+        }
+
+        function updateMicUI(isListening, text) {
+            const banner = document.getElementById('mic-status-banner');
+            const icon = document.getElementById('mic-icon');
+            document.getElementById('mic-text').textContent = text;
+            if(isListening) {
+                banner.classList.replace('bg-blue-600', 'bg-red-500'); icon.classList.add('mic-active-pulse');
+            } else {
+                banner.classList.replace('bg-red-500', 'bg-blue-600'); icon.classList.remove('mic-active-pulse');
+            }
+        }
+
+        function startListening() {
+            if (!state.voice.active || !state.voice.recognition || state.voice.isSpeaking || state.voice.isListening) return;
+            try { state.voice.recognition.start(); } catch(e) {}
+        }
+
+        function startListeningManual() {
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(!SR) { alert("Speech recognition tidak didukung browser ini."); return; }
+            let rec = new SR();
+            rec.lang = 'id-ID';
+            document.getElementById('mic-btn-label').textContent = "Mendengarkan...";
+            rec.onresult = (e) => {
+                let t = e.results[0][0].transcript.toLowerCase().trim();
+                document.getElementById('mic-btn-label').textContent = `Terdengar: "${t}"`;
+                processGlobalVoiceCommand(t);
+            };
+            rec.onerror = () => { document.getElementById('mic-btn-label').textContent = "Gagal mendengar"; };
+            rec.onend = () => { setTimeout(() => document.getElementById('mic-btn-label').textContent = "Bicara Sekarang (Sebut A, B, C, D)", 2000); };
+            try { rec.start(); } catch(e){}
+        }
+
+        function stopVoice() {
+            if(state.voice.synth) state.voice.synth.cancel();
+            state.voice.isSpeaking = false;
+            if(state.voice.recognition) { try { state.voice.recognition.stop(); } catch(e) {} }
+        }
+
+        function processGlobalVoiceCommand(t) {
+            if (t.includes("kuis") || t.includes("ujian")) {
+                speakText("Membuka menu Kuis.", () => openIdentityModal()); return;
+            } else if (t.includes("game") || t.includes("permainan")) {
+                speakText("Membuka Game.", () => navigateTo('view-minigame')); return;
+            } else if (t.includes("materi") || t.includes("buku")) {
+                speakText("Membuka Materi.", () => navigateTo('view-materi')); return;
+            } else if (t.includes("ai") || t.includes("tanya")) {
+                speakText("Membuka Bumi A I Tutor.", () => navigateTo('view-ai')); return;
+            } else if (t.includes("beranda") || t.includes("awal")) {
+                speakText("Kembali ke Beranda.", () => navigateTo('view-home')); return;
+            }
+            
+            if(document.getElementById('view-quiz').classList.contains('active')) {
+                let idx = -1;
+                if (t === "a" || t === "pilihan a" || t === "jawaban a" || t === "huruf a") idx = 0;
+                else if (t === "b" || t === "pilihan b" || t === "jawaban b" || t === "huruf b") idx = 1;
+                else if (t === "c" || t === "pilihan c" || t === "jawaban c" || t === "huruf c") idx = 2;
+                else if (t === "d" || t === "pilihan d" || t === "jawaban d" || t === "huruf d") idx = 3;
+                
+                if(idx !== -1) { handleAnswer(idx, true); }
+            } else if (document.getElementById('view-explanation').classList.contains('active')) {
+                if(t.includes("lanjut") || t.includes("next")) { nextQuestion(); }
+            }
+        }
+
+        // --- GEMINI API INTEGRATION (Gemini 3 Flash Preview - Elementary Mode) ---
+        async function sendGeminiAiMessage() {
+            const input = document.getElementById('ai-user-input');
+            const txt = input.value.trim();
+            if(!txt) return;
+
+            const chatBox = document.getElementById('ai-chat-box');
+            chatBox.innerHTML += `
+                <div class="flex items-start gap-3 justify-end">
+                    <div class="bg-indigo-600 text-white p-4 rounded-2xl shadow-sm max-w-md">${txt}</div>
+                    <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black flex-shrink-0">Kamu</div>
+                </div>
+            `;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            const loadingId = 'ai-loading-' + Date.now();
+            chatBox.innerHTML += `
+                <div id="${loadingId}" class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black flex-shrink-0">AI</div>
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 max-w-md text-slate-500 italic">Bumi sedang merespon...</div>
+                </div>
+            `;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const systemPrompt = "Kamu adalah Bumi, guru matematika yang sangat ramah, sabar, dan ceria untuk anak kelas 4 Sekolah Dasar di Indonesia. Jawablah dengan kalimat yang pendek, santai, dan menggunakan bahasa sehari-hari yang mudah dipahami anak kecil. Gunakan analogi makanan tradisional Indonesia seperti martabak atau kue lapis jika menjelaskan pecahan. Jangan gunakan simbol markdown yang rumit, teks tebal berlebih, atau tanda kurung kurawal agar enak dibaca anak-anak maupun dibacakan suara.";
+                
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: txt }] }],
+                    tools: [{ "google_search": {} }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] }
+                };
+
+                let response = null;
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    try {
+                        response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (response.ok) break;
+                    } catch(err) {
+                        await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000));
+                    }
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                let reply = "Maaf ya, Bumi lagi agak pusing sinyalnya. Coba tanya sekali lagi ya!";
+                
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    reply = candidate.content.parts[0].text;
+                }
+
+                document.getElementById(loadingId).remove();
+                chatBox.innerHTML += `
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black flex-shrink-0">AI</div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 max-w-md text-slate-700 leading-relaxed">${reply}</div>
+                    </div>
+                `;
+                chatBox.scrollTop = chatBox.scrollHeight;
+                if(state.voice.active) speakText(reply, null);
+
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                chatBox.innerHTML += `
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-black flex-shrink-0">AI</div>
+                        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 max-w-md text-red-600">Gagal terhubung ke server Bumi AI.</div>
+                    </div>
+                `;
+            }
+        }
+
+        function askAiQuick(q) {
+            document.getElementById('ai-user-input').value = q;
+            sendGeminiAiMessage();
+        }
+
+        // --- Quiz Session ---
+        function startQuizSession() {
+            const name = document.getElementById('student-name').value || "Siswa";
+            const absen = document.getElementById('student-absen').value || "-";
+            const kls = document.getElementById('student-class').value;
+            const top = document.getElementById('student-topic').value;
+
+            state.student = { name, absen, class: kls, topic: top };
+            
+            let filtered = top === 'all' ? dbQs : dbQs.filter(q => q.c === top);
+            state.quiz.questions = filtered.sort(() => 0.5 - Math.random()).slice(0, 10);
+            state.quiz.currentIndex = 0; state.quiz.score = 0;
+
+            document.getElementById('quiz-student-name').textContent = `${name} (${kls})`;
+            document.getElementById('quiz-topic-badge').textContent = top === 'all' ? 'Semua Bab' : top.toUpperCase();
+            
+            closeIdentityModal(); navigateTo('view-quiz');
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            const q = state.quiz.questions[state.quiz.currentIndex];
+            document.getElementById('quiz-progress-text').textContent = `${state.quiz.currentIndex + 1} / ${state.quiz.questions.length}`;
+            document.getElementById('question-text').textContent = q.q;
+            
+            const box = document.getElementById('options-box');
+            box.innerHTML = ''; 
+            q.o.forEach((opt, i) => {
+                const char = String.fromCharCode(65 + i);
+                box.innerHTML += `
+                    <button id="btn-opt-${i}" onclick="handleAnswer(${i}, false)" class="w-full text-left bg-slate-50 border-4 border-slate-200 hover:border-blue-500 hover:bg-blue-50 p-4 rounded-2xl font-bold text-lg flex items-center gap-4 transition-all shadow-sm">
+                        <span id="span-opt-${i}" class="bg-white border-2 border-slate-300 w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center text-slate-500">${char}</span>
+                        <span>${opt}</span>
+                    </button>
+                `;
+            });
+
+            if(state.voice.active) {
+                let txt = `Soal ${state.quiz.currentIndex + 1}. ${q.q} `;
+                q.o.forEach((opt, i) => txt += `Pilihan ${String.fromCharCode(65+i)}: ${opt}. `);
+                speakText(txt, startListening);
+            }
+        }
+
+        function readCurrentQuizQuestion() {
+            const q = state.quiz.questions[state.quiz.currentIndex];
+            let txt = `Soal ${state.quiz.currentIndex + 1}. ${q.q} `;
+            q.o.forEach((opt, i) => txt += `Pilihan ${String.fromCharCode(65+i)}: ${opt}. `);
+            speakText(txt, startListening);
+        }
+
+        function handleAnswer(idx, fromVoice) {
+            if(!fromVoice) stopVoice();
+            const q = state.quiz.questions[state.quiz.currentIndex];
+            const isCorr = (idx === q.a);
+            
+            if(isCorr) { state.quiz.score++; playSfx('correct'); } else { playSfx('wrong'); }
+
+            const btn = document.getElementById(`btn-opt-${idx}`);
+            const span = document.getElementById(`span-opt-${idx}`);
+            if(isCorr) {
+                btn.classList.add('border-emerald-500', 'bg-emerald-50'); span.classList.add('bg-emerald-500', 'text-white');
+            } else {
+                btn.classList.add('border-red-500', 'bg-red-50'); span.classList.add('bg-red-500', 'text-white');
+                document.getElementById(`btn-opt-${q.a}`).classList.add('border-emerald-500');
+            }
+
+            document.getElementById('exp-icon').textContent = isCorr ? "✅" : "❌";
+            document.getElementById('exp-title').textContent = isCorr ? "Benar!" : "Kurang Tepat.";
+            document.getElementById('exp-detail').textContent = q.e;
+            
+            if(state.voice.active) {
+                speakText(`${isCorr ? 'Benar!' : 'Kurang tepat.'} ${q.e}. Katakan lanjut.`, startListening);
+            }
+            setTimeout(() => navigateTo('view-explanation'), 800);
+        }
+
+        function nextQuestion() {
+            stopVoice();
+            state.quiz.currentIndex++;
+            if (state.quiz.currentIndex < state.quiz.questions.length) {
+                navigateTo('view-quiz'); renderQuestion();
+            } else { finishQuiz(); }
+        }
+
+        function finishQuiz() {
+            navigateTo('view-result');
+            const fs = Math.round((state.quiz.score / state.quiz.questions.length) * 100);
+            document.getElementById('res-name').textContent = state.student.name;
+            document.getElementById('res-class').textContent = state.student.class;
+            document.getElementById('res-score').textContent = fs;
+            
+            const badges = document.getElementById('badges-container');
+            badges.innerHTML = '';
+            if(fs>=80) badges.innerHTML += `<span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-bold">🏅 Bintang Emas</span>`;
+            if(fs===100) badges.innerHTML += `<span class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold">👑 Sempurna</span>`;
+            
+            state.dashboard.push({ d: new Date().toLocaleString(), n: state.student.name, c: state.student.class, t: state.student.topic, s: fs });
+            localStorage.setItem('cerdasmi_dash', JSON.stringify(state.dashboard));
+            
+            if(state.voice.active) speakText(`Selesai! Skor akhir kamu ${fs}.`, null);
+        }
+
+        // --- Leaderboard & Dashboard ---
+        function renderLeaderboard() {
+            const lb = document.getElementById('leaderboard-list');
+            lb.innerHTML = '';
+            let sorted = [...state.dashboard].sort((a,b) => b.s - a.s);
+            if(sorted.length === 0) {
+                lb.innerHTML = `<p class="text-center text-slate-400 py-4">Belum ada data kuis yang diselesaikan.</p>`;
+                return;
+            }
+            sorted.slice(0, 5).forEach((item, index) => {
+                let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅';
+                lb.innerHTML += `
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">${medal}</span>
+                            <div>
+                                <h4 class="font-bold text-slate-800">${item.n} (${item.c})</h4>
+                                <p class="text-xs text-slate-500 uppercase">${item.t}</p>
+                            </div>
+                        </div>
+                        <span class="text-2xl font-black text-blue-600">${item.s}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderDashboard() {
+            const tb = document.getElementById('dashboard-tbody'); tb.innerHTML = '';
+            [...state.dashboard].reverse().forEach(d => {
+                tb.innerHTML += `<tr class="border-b"><td class="py-3 px-4">${d.d}</td><td class="py-3 px-4 font-bold">${d.n}</td><td class="py-3 px-4">${d.c}</td><td class="py-3 px-4 uppercase">${d.t}</td><td class="py-3 px-4 font-black text-blue-600">${d.s}</td></tr>`;
+            });
+        }
+        function clearDashboard() { if(confirm("Hapus seluruh data riwayat?")) { state.dashboard=[]; localStorage.removeItem('cerdasmi_dash'); renderDashboard(); } }
+
+        // --- Interactive Labs ---
+        let ab = {pr:4, rb:5, rt:2};
+        function updateAbacus(pos, val) {
+            ab[pos] += val; if(ab[pos]<0) ab[pos]=0; if(ab[pos]>9) ab[pos]=9;
+            document.getElementById(`val-${pos}`).textContent = ab[pos];
+            let tot = (ab.pr*10000)+(ab.rb*1000)+(ab.rt*100);
+            document.getElementById('abacus-number').textContent = tot.toLocaleString('id-ID');
+        }
+
+        function updatePizza() {
+            let pbl = parseInt(document.getElementById('slide-pbl').value);
+            let pyb = parseInt(document.getElementById('slide-pyb').value);
+            if(pbl>pyb) { pbl=pyb; document.getElementById('slide-pbl').value = pyb; }
+            document.getElementById('lbl-pbl').textContent = pbl; document.getElementById('lbl-pyb').textContent = pyb;
+            document.getElementById('txt-pecahan').textContent = `${pbl}/${pyb}`; 
+            document.getElementById('txt-desimal').textContent = (pbl===0 || pyb===0) ? "0" : (pbl/pyb).toFixed(2);
+            document.getElementById('txt-persen').textContent = (pbl===0 || pyb===0) ? "0%" : Math.round((pbl/pyb)*100) + "%";
+            let p = (pyb===0)? 0 : (pbl/pyb)*100;
+            document.getElementById('pizza-container').innerHTML = pbl===0?'<div class="w-full h-full bg-slate-200"></div>':`<div class="w-full h-full rounded-full transition-all duration-500" style="background: conic-gradient(#F59E0B ${p}%, #FEF3C7 0);"></div>`;
+        }
+        
+        function updateShape() {
+            let type = document.getElementById('shape-selector').value;
+            let p = parseInt(document.getElementById('slide-p').value);
+            let l = parseInt(document.getElementById('slide-l').value);
+            
+            let box = document.getElementById('shape-box');
+            let txtLuas = document.getElementById('txt-luas');
+            let txtKeliling = document.getElementById('txt-keliling');
+            let valP = document.getElementById('val-p');
+            let valL = document.getElementById('val-l');
+            let wrapL = document.getElementById('wrap-slide-l');
+            let lblP = document.getElementById('lbl-ukuran-p');
+            let lblL = document.getElementById('lbl-ukuran-l');
+            let lblSliderP = document.getElementById('lbl-slider-p');
+            let lblSliderL = document.getElementById('lbl-slider-l');
+            
+            valP.textContent = p; valL.textContent = l;
+            box.style.clipPath = 'none'; box.style.borderRadius = '0';
+            box.className = "flex items-center justify-center relative transition-all duration-300 shadow-md";
+
+            if (type === 'persegipanjang') {
+                wrapL.style.display = 'block';
+                lblSliderP.textContent = 'Panjang (p) cm'; lblSliderL.textContent = 'Lebar (l) cm';
+                lblP.innerHTML = `p = <span>${p}</span> cm`; lblL.innerHTML = `l = <span>${l}</span> cm`;
+                lblL.style.display = 'block';
+                txtLuas.textContent = p * l; txtKeliling.textContent = 2 * (p + l);
+                box.style.width = `${p*20}px`; box.style.height = `${l*20}px`;
+                box.classList.add('bg-blue-400');
+            } else if (type === 'persegi') {
+                wrapL.style.display = 'none';
+                lblSliderP.textContent = 'Sisi (s) cm';
+                lblP.innerHTML = `s = <span>${p}</span> cm`;
+                lblL.style.display = 'none';
+                txtLuas.textContent = p * p; txtKeliling.textContent = 4 * p;
+                box.style.width = `${p*20}px`; box.style.height = `${p*20}px`;
+                box.classList.add('bg-emerald-400');
+            } else if (type === 'segitiga') {
+                wrapL.style.display = 'block';
+                lblSliderP.textContent = 'Alas (a) cm'; lblSliderL.textContent = 'Tinggi (t) cm';
+                lblP.innerHTML = `a = <span>${p}</span> cm`; lblL.innerHTML = `t = <span>${l}</span> cm`;
+                lblL.style.display = 'block';
+                txtLuas.textContent = (p * l) / 2;
+                let sm = Math.sqrt(Math.pow(p/2, 2) + Math.pow(l, 2));
+                txtKeliling.textContent = (p + 2 * sm).toFixed(1);
+                box.style.width = `${p*20}px`; box.style.height = `${l*20}px`;
+                box.style.clipPath = 'polygon(50% 0%, 0% 100%, 100% 100%)';
+                box.classList.add('bg-purple-400');
+            }
+        }
+
+        function updateAngle() {
+            let d = document.getElementById('slide-sudut').value;
+            document.getElementById('txt-derajat').textContent = d+"°";
+            let j="Lurus", c="bg-blue-100 text-blue-700";
+            if(d<90){j="Lancip";c="bg-emerald-100 text-emerald-700";} else if(d==90){j="Siku-siku";c="bg-amber-100 text-amber-700";} else if(d<180){j="Tumpul";c="bg-purple-100 text-purple-700";}
+            let bdg = document.getElementById('txt-jenis-sudut'); bdg.textContent = j; bdg.className = `px-3 py-1 font-bold rounded-full text-sm ${c}`;
+            document.getElementById('angle-line').style.transform = `rotate(-${d}deg)`;
+        }
+
+        // --- Mini Game ---
+        function startMiniGame() {
+            document.getElementById('game-setup').classList.add('hidden'); document.getElementById('game-over').classList.add('hidden');
+            document.getElementById('game-play').classList.remove('hidden');
+            state.game.score = 0; state.game.time = 30;
+            document.getElementById('game-score').textContent = 0; document.getElementById('game-time').textContent = 30;
+            nextGameQ();
+            if(state.game.timer) clearInterval(state.game.timer);
+            state.game.timer = setInterval(() => {
+                state.game.time--; document.getElementById('game-time').textContent = state.game.time;
+                if(state.game.time <= 0) { clearInterval(state.game.timer); document.getElementById('game-play').classList.add('hidden'); document.getElementById('game-over').classList.remove('hidden'); document.getElementById('game-final-score').textContent = state.game.score; playSfx('beep'); }
+            }, 1000);
+        }
+
+        function nextGameQ() {
+            let a=Math.floor(Math.random()*10)+1, b=Math.floor(Math.random()*10)+1;
+            state.game.answer = a*b; document.getElementById('game-question').textContent = `${a} x ${b} = ?`;
+            let opts = [state.game.answer];
+            while(opts.length<4){ let f=state.game.answer+(Math.floor(Math.random()*10)-5); if(f!=state.game.answer && f>0 && !opts.includes(f)) opts.push(f); }
+            opts.sort(()=>0.5-Math.random());
+            let bx = document.getElementById('game-options'); bx.innerHTML = '';
+            opts.forEach(v => {
+                bx.innerHTML += `<button onclick="ansGame(${v})" class="bg-slate-700 hover:bg-slate-600 text-white font-black text-2xl py-5 rounded-xl shadow">${v}</button>`;
+            });
+        }
+
+        function ansGame(v) {
+            if(v===state.game.answer) { state.game.score+=10; document.getElementById('game-score').textContent=state.game.score; playSfx('correct'); nextGameQ(); }
+            else { state.game.time-=3; playSfx('wrong'); }
+        }
+
+        updatePizza(); updateShape(); updateAngle();
+    </script>
+</body>
+</html>
